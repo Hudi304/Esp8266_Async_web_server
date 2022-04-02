@@ -16,6 +16,9 @@ const char* password = "12345678";
 bool ledState = 0;
 const int ledPin = 2;
 
+uint32_t rpm[12] = { 1000, 1000, 1500, 2000, 2500, 3000, 3000, 2500, 2000,1500,1000,1000 };
+uint8_t rpm_index = 0;
+
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
@@ -32,12 +35,23 @@ void handleWebSocketMessage(void* arg, uint8_t* data, size_t len) {
       ledState = !ledState;
       notifyClients();
     }
+
+    if (strcmp((char*)data, "dash") == 0) {
+      ws.textAll(String(rpm[rpm_index]));
+      if (rpm_index < 11) {
+        rpm_index++;
+      }
+      else {
+        rpm_index = 0;
+      }
+      // notifyClients();
+    }
   }
 }
 
 void onEvent(AsyncWebSocket* server, AsyncWebSocketClient* client, AwsEventType type,
   void* arg, uint8_t* data, size_t len) {
-  Serial.printf("got data id:%u\n", client->id());
+  Serial.printf("got data id:%u \n", client->id());
 
   switch (type) {
   case WS_EVT_CONNECT:
@@ -112,9 +126,10 @@ void setup() {
 int secs = 0;
 
 void loop() {
-  if(millis() / 1000 > secs){
-    ws.pingAll();
-    secs = millis()/1000; 
+  if (millis() / 1000 > secs) {
+    // ws.pingAll();
+    // ws.textAll("p");
+    secs = millis() / 1000;
   }
 
   ws.cleanupClients();
