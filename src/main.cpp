@@ -2,6 +2,8 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <SoftwareSerial.h>
+
 
 // Replace with your network credentials
 const char* ssid = "Redmi";
@@ -93,19 +95,23 @@ String processor(const String& var) {
   return String();
 }
 
+SoftwareSerial SpeeduinoSerial(D5, D6); //Rx. Tx
+
+
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
+  SpeeduinoSerial.begin(115200);
 
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
 
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi..");
-  }
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(1000);
+  //   Serial.println("Connecting to WiFi..");
+  // }
 
   // Print ESP Local IP Address
   Serial.println(WiFi.localIP());
@@ -120,16 +126,70 @@ void setup() {
   // Start server
 
   server.begin();
+
+  delay(10000);
 }
 
 
+
+
 int secs = 0;
+String chr;
+
+
+void getSimpleDataSetA() {
+  SpeeduinoSerial.print("A");
+  //Check if there is anything inside the buffer
+
+  // Serial.println();
+  // Serial.println("getSimpleDataSet");
+
+  char buffer[78];
+  int index = 0;
+
+  // SpeeduinoSerial.read();
+
+  while (SpeeduinoSerial.available() > 0) {
+    // buffer[index] = SpeeduinoSerial.read();
+    // index++;v
+
+    Serial.print(SpeeduinoSerial.read(),HEX);
+    Serial.print("|");
+  }
+
+
+  Serial.println();
+  // Serial.print(buffer);
+  // Serial.print("|");
+
+
+  // Serial.printf("buffer : %s\n", buffer[index]);
+
+  // buffer[index] = '\n';
+
+  // return buffer;
+}
+
+
+char AcmdResp[78];
+
 
 void loop() {
-  if (millis() / 1000 > secs) {
+  if (millis() / 50 > secs) {
     // ws.pingAll();
+    ws.binaryAll("a");
     // ws.textAll("p");
-    secs = millis() / 1000;
+    // chr = softSerial.read();
+    // Serial.println(chr);
+    getSimpleDataSetA();
+
+    // Serial.println();
+
+    // AcmdResp = getSimpleDataSetA()
+
+      // SpeeduinoSerial.println("ESP8266");
+
+    secs = millis() / 50;
   }
 
   ws.cleanupClients();
