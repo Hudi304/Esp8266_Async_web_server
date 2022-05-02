@@ -7,11 +7,8 @@
 const char* ssid = "Redmi";
 const char* password = "12345678";
 
-// const char* ssid = "TechQuarter";
-// const char* password = "!techP455";
-
-// AsyncWebSocketClient gGlient =  new AsyncWebSocketClient();
-
+const char* SoftAPssid = "ESP8266";
+const char* SoftAPpassword = "ESP8266";
 
 bool ledState = 0;
 const int ledPin = 2;
@@ -27,44 +24,72 @@ void notifyClients() {
   ws.textAll(String(ledState));
 }
 
-void handleWebSocketMessage(void* arg, uint8_t* data, size_t len) {
+void notifyClientsStr(String msg) {
+  ws.textAll(msg);
+}
+
+void handleWebSocketMessage(void* arg, uint8_t* data, size_t len, AsyncWebSocketClient* client) {
   AwsFrameInfo* info = (AwsFrameInfo*)arg;
   if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
     data[len] = 0;
     if (strcmp((char*)data, "toggle") == 0) {
       ledState = !ledState;
-      notifyClients();
-    }
 
-    if (strcmp((char*)data, "dash") == 0) {
-      ws.textAll(String(rpm[rpm_index]));
-      if (rpm_index < 11) {
-        rpm_index++;
+      String msg = "";
+      msg.concat("Client[");
+      msg.concat(String(client->id()));
+      msg.concat("] turned the LED : ");
+      if (ledState) {
+        msg.concat("OFF");
       }
       else {
-        rpm_index = 0;
+        msg.concat("ON");
       }
-      // notifyClients();
+      notifyClientsStr(msg);
     }
+    else {
+      String msg = "";
+      msg.concat("Client[");
+      msg.concat(String(client->id()));
+      msg.concat("]: ");
+
+
+      for (int i = 0; i < len;i++) {
+        msg.concat((char)data[i]);
+      }
+      notifyClientsStr(msg);
+
+    }
+
+    // if (strcmp((char*)data, "dash") == 0) {
+    //   ws.textAll(String(rpm[rpm_index]));
+    //   if (rpm_index < 11) {
+    //     rpm_index++;
+    //   }
+    //   else {
+    //     rpm_index = 0;
+    //   }
+    //   // notifyClients();
+    // }
   }
 }
 
 void onEvent(AsyncWebSocket* server, AsyncWebSocketClient* client, AwsEventType type,
   void* arg, uint8_t* data, size_t len) {
-  Serial.printf("got data id:%u \n", client->id());
+  Serial.printf("Msg Client [%u]  \n", client->id());
 
   switch (type) {
   case WS_EVT_CONNECT:
     Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-    client->ping();
-    ws.textAll("connected");
+    // client->ping();
+    // ws.textAll("connected");
     break;
   case WS_EVT_DISCONNECT:
     Serial.printf("WebSocket client #%u disconnected\n", client->id());
     break;
   case WS_EVT_DATA:
-    Serial.printf("message\n");
-    handleWebSocketMessage(arg, data, len);
+    // Serial.printf("message\n");
+    handleWebSocketMessage(arg, data, len, client);
     break;
   case WS_EVT_PONG:
     Serial.printf("pong\n");
@@ -93,6 +118,38 @@ String processor(const String& var) {
   return String();
 }
 
+
+
+const char* ap_ssid = "ESP8266"; //Access Point SSID
+const char* ap_password = "embedded-robotics"; //Access Point Password
+uint8_t max_connections = 8;//Maximum Connection Limit for AP
+int current_stations = 0, new_stations = 0;
+
+void setUpSoftAP() {
+  if (WiFi.softAP(ap_ssid, ap_password, 1, false, max_connections) == true)
+  {
+    Serial.print("Access Point is Creadted with SSID: ");
+    Serial.println(ap_ssid);
+    Serial.print("Max Connections Allowed: ");
+    Serial.println(max_connections);
+    Serial.print("Access Point IP: ");
+    Serial.println(WiFi.softAPIP());
+  }
+  else
+  {
+    Serial.println("Unable to Create Access Point");
+  }
+}
+
+void setUpStation() {
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi..");
+  }
+}
+
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
@@ -101,24 +158,22 @@ void setup() {
   digitalWrite(ledPin, LOW);
 
   // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi..");
-  }
+  // WiFi.begin(ssid, password);
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(1000);
+  //   Serial.println("Connecting to WiFi..");
+  // }
+
+  setUpStation();
+
+  delay(2000);
+
+
+  // setUpSoftAP();
 
   // Print ESP Local IP Address
   Serial.println(WiFi.localIP());
-
   initWebSocket();
-
-  // Route for root / web page
-  // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    // request->send(200, "text/plain");
-  // });
-
-  // Start server
-
   server.begin();
 }
 
@@ -126,12 +181,25 @@ void setup() {
 int secs = 0;
 
 void loop() {
-  if (millis() / 1000 > secs) {
-    // ws.pingAll();
-    // ws.textAll("p");
-    secs = millis() / 1000;
-  }
 
   ws.cleanupClients();
   digitalWrite(ledPin, ledState);
+
+
+
+  // new_stations=WiFi.softAPgetStationNum();
+
+  // if(current_stations<new_stations)//Device is Connected
+  // {
+  //   current_stations=new_stations;
+  //   Serial.print("New Device Connected to SoftAP... Total Connections: ");
+  //   Serial.println(current_stations);
+  // }
+
+  // if(current_stations>new_stations)//Device is Disconnected
+  // {
+  //   current_stations=new_stations;
+  //   Serial.print("Device disconnected from SoftAP... Total Connections: ");
+  //   Serial.println(current_stations);
+  // }
 }
