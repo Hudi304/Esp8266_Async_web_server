@@ -8,6 +8,8 @@ const char* ssid = "Redmi";
 const char* password = "12345678";
 
 
+const int ledPin = 2;
+
 #define LED D0
 
 SoftwareSerial SpeeduinoSerial(D5, D6); //Rx. Tx
@@ -18,8 +20,8 @@ char AcmdResp[78];
 
 void setup() {
 
-  pinMode(LED, OUTPUT);
-  digitalWrite(LED, HIGH);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
   Serial.begin(115200);
   SpeeduinoSerial.begin(115200);
 
@@ -37,42 +39,28 @@ byte response[100];
 
 char caracter;
 
+int availableBytes = 0;
+
 void loop() {
 
-  Serial.println();
-  Serial.print("loop :");
-  Serial.print(cnt);
+  // Serial.println();
+  // Serial.print("loop :");
+  // Serial.print(cnt);
 
-
-
+  // SpeeduinoSerial.flush();
   SpeeduinoSerial.write("A");
   Serial.println("->A");
 
   if (SpeeduinoSerial.available() > 0) {
-    Serial.println("");
-    Serial.println("SeeduinoSrerial is available");
-    Serial.println(SpeeduinoSerial.available());
-    caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());
-
-    caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());caracter = SpeeduinoSerial.read();
-    Serial.println(SpeeduinoSerial.available());
-
-    for (int i = 0;i < 75;i++) {
+    // Serial.println("SeeduinoSrerial is available");
+    // caracter = SpeeduinoSerial.read();
+    for (int i = 0;i < 64;i++) {
       caracter = SpeeduinoSerial.read();
       Serial.print(caracter);
       Serial.print("|");
     }
   }
 
-  delay(5000);
+  delay(1000);
   cnt++;
 }
