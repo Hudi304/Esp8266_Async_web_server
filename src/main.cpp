@@ -12,55 +12,40 @@ const int ledPin = 2;
 
 #define LED D0
 
-SoftwareSerial SpeeduinoSerial(D5, D6); //Rx. Tx
+SoftwareSerial SpeeduinoSerial(D5, D6, false); //Rx. Tx
 int secs = 0;
 String chr;
 char AcmdResp[78];
 
 
+byte response[100];
+
+void printResponse() {
+  for (int i = 0;i < 100;i++) {
+    Serial.print("|");
+    Serial.print(response[i], HEX);
+  }
+}
+
 void setup() {
+
 
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
   Serial.begin(115200);
-  SpeeduinoSerial.begin(115200);
+  // SpeeduinoSerial.begin(115200);
 
-  if (!SpeeduinoSerial) {
-    Serial.println("Invalid");
-  }
+  delay(500);
+  Serial.swap();
+  delay(500);
 
-  Serial.println("------------setup end---------------");
+
+  Serial.print("A");
+
 }
 
-int cnt = 0;
-int nrOfBytes = 0;
 
-byte response[100];
-
-char caracter;
-
-int availableBytes = 0;
 
 void loop() {
 
-  // Serial.println();
-  // Serial.print("loop :");
-  // Serial.print(cnt);
-
-  // SpeeduinoSerial.flush();
-  SpeeduinoSerial.write("A");
-  Serial.println("->A");
-
-  if (SpeeduinoSerial.available() > 0) {
-    // Serial.println("SeeduinoSrerial is available");
-    // caracter = SpeeduinoSerial.read();
-    for (int i = 0;i < 64;i++) {
-      caracter = SpeeduinoSerial.read();
-      Serial.print(caracter);
-      Serial.print("|");
-    }
-  }
-
-  delay(1000);
-  cnt++;
 }
