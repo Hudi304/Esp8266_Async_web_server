@@ -98,6 +98,48 @@ String processor(const String& var) {
 SoftwareSerial SpeeduinoSerial(D5, D6); //Rx. Tx
 
 
+int secs = 0;
+String chr;
+
+
+// void getSimpleDataSetA() {
+//   Serial.println("Sent A command");
+//   SpeeduinoSerial.print("A");
+//   //Check if there is anything inside the buffer
+
+//   // Serial.println();
+//   // Serial.println("getSimpleDataSet");
+
+//   char buffer[78];
+//   int index = 0;
+
+//   // SpeeduinoSerial.read();
+
+//   while (SpeeduinoSerial.available() > 0) {
+//     // buffer[index] = SpeeduinoSerial.read();
+//     // index++;
+
+//     Serial.print(SpeeduinoSerial.read(), HEX);
+//     Serial.print("|");
+//     Serial.println();
+//   }
+
+
+//   // Serial.print(buffer);
+//   // Serial.print("|");
+
+
+//   // Serial.printf("buffer : %s\n", buffer[index]);
+
+//   // buffer[index] = '\n';
+
+//   // return buffer;
+// }
+
+
+char AcmdResp[78];
+
+
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
@@ -107,16 +149,16 @@ void setup() {
   digitalWrite(ledPin, LOW);
 
   // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
+  // WiFi.begin(ssid, password);
   // while (WiFi.status() != WL_CONNECTED) {
   //   delay(1000);
   //   Serial.println("Connecting to WiFi..");
   // }
 
   // Print ESP Local IP Address
-  Serial.println(WiFi.localIP());
+  // Serial.println(WiFi.localIP());
 
-  initWebSocket();
+  // initWebSocket();
 
   // Route for root / web page
   // server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -125,73 +167,45 @@ void setup() {
 
   // Start server
 
-  server.begin();
+  // server.begin();
 
   delay(10000);
-}
 
-
-
-
-int secs = 0;
-String chr;
-
-
-void getSimpleDataSetA() {
   SpeeduinoSerial.print("A");
-  //Check if there is anything inside the buffer
-
-  // Serial.println();
-  // Serial.println("getSimpleDataSet");
-
-  char buffer[78];
-  int index = 0;
-
-  // SpeeduinoSerial.read();
+  Serial.println("Sent A command");
 
   while (SpeeduinoSerial.available() > 0) {
-    // buffer[index] = SpeeduinoSerial.read();
-    // index++;v
 
-    Serial.print(SpeeduinoSerial.read(),HEX);
+
+    // Serial.print(SpeeduinoSerial.read(), HEX);
     Serial.print("|");
+    Serial.println();
   }
 
 
-  Serial.println();
-  // Serial.print(buffer);
-  // Serial.print("|");
-
-
-  // Serial.printf("buffer : %s\n", buffer[index]);
-
-  // buffer[index] = '\n';
-
-  // return buffer;
+  // getSimpleDataSetA();
 }
 
-
-char AcmdResp[78];
-
-
 void loop() {
-  if (millis() / 50 > secs) {
+  if (millis() / 5000 > secs) {
     // ws.pingAll();
-    ws.binaryAll("a");
+    // ws.binaryAll("a");
     // ws.textAll("p");
     // chr = softSerial.read();
     // Serial.println(chr);
-    getSimpleDataSetA();
+    // getSimpleDataSetA();
 
-    // Serial.println();
+    SpeeduinoSerial.print("A");
+    Serial.println(" -> A ");
 
-    // AcmdResp = getSimpleDataSetA()
-
-      // SpeeduinoSerial.println("ESP8266");
-
-    secs = millis() / 50;
+    while (SpeeduinoSerial.available() > 0) {
+      Serial.print(SpeeduinoSerial.read(), HEX);
+      Serial.print("|");
+    }
+    Serial.println();
+    secs = millis() / 5000;
   }
 
-  ws.cleanupClients();
-  digitalWrite(ledPin, ledState);
+  // ws.cleanupClients();
+  // digitalWrite(ledPin, ledState);
 }
