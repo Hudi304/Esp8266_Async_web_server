@@ -5,12 +5,12 @@
 
 const char* ssid = "Redmi";
 const char* password = "12345678";
+
 bool ledState = 0;
 const int ledPin = 2;
+
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
-AsyncWebSocketClient* adminClient;
-uint8_t clientIndex = 0;
 
 long int loopIndex = 0;
 
@@ -99,38 +99,24 @@ void setup() {
 
 int secs = 0;
 int oldSecs = 0;
-
 bool lock = true;
-
 
 enum {
   READY_TO_WRITE = 0,
-  DONE_WRITING = 1,
-
   READY_TO_READ = 2,
-  READING = 3,
-  DONE_READING = 4,
-
   READY_TO_SEND_SOCKET = 5,
   SENT_SOCKET = 6,
 };
 
 unsigned char state = READY_TO_WRITE;
 
-bool recvInProgress = false;
-bool doneTransmitting = true;
-bool doneReading = true;
+#define  BUFF_LEN 76
 
-bool readyToQuery = true;
-bool readyToReadData = false;
-bool readyToSendToSocket = false;
-bool sendingToSocket = false;
-bool bufferHasNewData = false;
+char receivedBytes[BUFF_LEN] = {};
+char charsForSocket[BUFF_LEN] = {};
 
 
-char receivedBytes[20] = {};
-char charsForSocket[20];
-u_int8_t recvIndex = 0;
+int recvIndex = 0;
 
 void flushUARTbuffer() {
   while (Serial.available() > 0) {
@@ -151,16 +137,21 @@ void sendData() {
 void receiveByte() {
   if (state == READY_TO_READ) {
     if (Serial.available() > 0) {
-      if (receivedBytes[13] == 0) {
+      // if (receivedBytes[BUFF_LEN - 2] == 0) {
+      if (recvIndex < BUFF_LEN ) {
+
         char received;
         received = Serial.read();
+        if (received == 0) {
+          received = '0';
+        }
         receivedBytes[recvIndex] = received;
         recvIndex++;
       }
       else {
         flushUARTbuffer();
         strcpy(charsForSocket, receivedBytes);
-        for (int i = 0; i < 15;i++) {
+        for (int i = 0; i < BUFF_LEN ;i++) {
           receivedBytes[i] = 0;
         }
         recvIndex = 0;
@@ -170,11 +161,11 @@ void receiveByte() {
   }
 }
 
+#define SO_MSG_LEN 20
+
 void sendDataToSocket() {
   if (state == READY_TO_SEND_SOCKET) {
-    char msg[20];
-    sprintf(msg, "[%ld]:%s", loopIndex, charsForSocket);
-    ws.textAll(msg);
+    ws.binaryAll(charsForSocket);
     state = SENT_SOCKET;
   }
 }
