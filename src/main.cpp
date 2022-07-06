@@ -143,7 +143,7 @@ void receiveByte() {
         char received;
         received = Serial.read();
         if (received == 0) {
-          received = '0';
+          received = 1;
         }
         receivedBytes[recvIndex] = received;
         recvIndex++;
@@ -178,7 +178,7 @@ void loop() {
   sendData();
   receiveByte();
   sendDataToSocket();
-  secs = millis() / 100;
+  secs = millis() / 12;
 
   if (secs != oldSecs) {
     oldSecs = secs;
