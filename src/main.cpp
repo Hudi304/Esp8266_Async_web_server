@@ -29,17 +29,6 @@ void handleWebSocketMessage(void* arg, uint8_t* data, size_t len, AsyncWebSocket
     String dataString = String((const char*)data);
     if (strcmp((char*)data, "toggle") == 0) {
       ledState = !ledState;
-      String msg = "";
-      msg.concat("Client[");
-      msg.concat(String(client->id()));
-      msg.concat("] turned the LED : ");
-      if (ledState) {
-        msg.concat("OFF");
-      }
-      else {
-        msg.concat("ON");
-      }
-      notifyClientsStr(msg);
     }
 
     if (strcmp((char*)data, "A") == 0) {
@@ -48,26 +37,9 @@ void handleWebSocketMessage(void* arg, uint8_t* data, size_t len, AsyncWebSocket
     }
 
     if (strcmp((char*)data, "R") == 0) {
-      if (Serial.available() > 0) {
-        char msg = Serial.read();
-        notifyClientsStr("Serial Available");
-        notifyClientsStr(String(msg));
-        notifyClientsStr(String(Serial.available()));
-      }
-      else {
-        notifyClientsStr("Serial NOT Available");
-      }
+
     }
-    else {
-      String msg = "";
-      msg.concat("Client[");
-      msg.concat(String(client->id()));
-      msg.concat("]: ");
-      for (int i = 0; i < len;i++) {
-        msg.concat((char)data[i]);
-      }
-      notifyClientsStr(msg);
-    }
+    else {}
   }
 }
 
@@ -75,21 +47,9 @@ int clientNo = 0;
 
 void onEvent(AsyncWebSocket* socket, AsyncWebSocketClient* client, AwsEventType type,
   void* arg, uint8_t* data, size_t len) {
-  // Serial.printf("Msg Client [%u]  \n", client->id());
-
   switch (type) {
   case WS_EVT_CONNECT:
-    // Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
-    // if (adminClientId == 0) {
-      // Serial.printf("in if");
-      // clientIndex++;
-      // adminClientId = client->id();
-      // adminClient = client;
-      // Serial.printf("%u", (char*)adminClient->id());
-    // }
-
     clientNo++;
-
     notifyClientsStr("con");
     break;
   case WS_EVT_DISCONNECT:
@@ -102,9 +62,6 @@ void onEvent(AsyncWebSocket* socket, AsyncWebSocketClient* client, AwsEventType 
   case WS_EVT_PONG:
     break;
   case WS_EVT_ERROR:
-    // Serial.printf("error\n");
-    // Serial.print((char*)data);
-
     break;
   }
 }
@@ -140,6 +97,11 @@ void setup() {
   server.begin();
 }
 
+int secs = 0;
+int oldSecs = 0;
+
+bool lock = true;
+
 bool recvInProgress = false;
 bool doneTransmitting = true;
 bool doneReading = true;
@@ -161,24 +123,13 @@ void flushUARTbuffer() {
   }
 }
 
-void doneTransmittingCleanUp() {
-  readyToQuery = true;
-  readyToReadData = false;
-  readyToSendToSocket = true;
-  strcpy(charsForSocket, receivedBytes);
-  flushUARTbuffer();
-  recvIndex = 0;
-  // ws.textAll("done Transmitting");
-}
-
 void sendData() {
   if (readyToQuery == true && clientNo > 0) {
-    // ws.textAll("sent Data");
-    // notifyClientsStr("sent Data");
     flushUARTbuffer();
     Serial.print('A');
     readyToQuery = false;
     readyToReadData = true;
+    ws.textAll("sent UART data");
   }
 }
 
@@ -186,43 +137,42 @@ void receiveByte() {
   if (Serial.available() > 0 && readyToReadData) {
     if (recvIndex < 13) {
       char received;
+      char chr[1];
       received = Serial.read();
       receivedBytes[recvIndex] = received;
-      strcpy(charsForSocket, receivedBytes);
-      ws.textAll(receivedBytes);
+      chr[0] = received;
+      // ws.textAll(receivedBytes);
+      ws.textAll(chr);
+
       recvIndex++;
       bufferHasNewData = true;
     }
     else {
+      ws.textAll(receivedBytes);
       flushUARTbuffer();
       readyToReadData = false;
       readyToSendToSocket = true;
-      strcpy(charsForSocket, receivedBytes);
-      char msg[30] = "finished reading";
-      char msg2[30] = "flushed buffer";
-      sprintf(msg2, "%d", Serial.available());
       recvIndex = 0;
     }
   }
   else {
     flushUARTbuffer();
-    readyToQuery = false;
     readyToReadData = false;
     readyToSendToSocket = true;
     strcpy(charsForSocket, receivedBytes);
     recvIndex = 0;
-
   }
 }
 
 void sendDataToSocket() {
-  if (readyToSendToSocket && bufferHasNewData) {
-    char msg[40] = "finished reading";
-    sprintf(msg, "%d : %s", loopIndex, charsForSocket);
-    ws.textAll(msg);
+  if (readyToSendToSocket && bufferHasNewData && lock == false) {
+    // ws.textAll("test send");
+    ws.textAll(receivedBytes);
+
     readyToSendToSocket = false;
     readyToQuery = true;
     bufferHasNewData = false;
+    lock = true;
   }
 }
 
@@ -234,4 +184,13 @@ void loop() {
   sendData();
   receiveByte();
   sendDataToSocket();
+  secs = millis() / 1000;
+
+  if (secs != oldSecs) {
+    oldSecs = secs;
+    lock = false;
+    if (bufferHasNewData == false) {
+      readyToQuery = true;
+    }
+  }
 }
