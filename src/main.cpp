@@ -102,6 +102,21 @@ int oldSecs = 0;
 
 bool lock = true;
 
+
+enum {
+  READY_TO_WRITE = 0,
+  DONE_WRITING = 1,
+
+  READY_TO_READ = 2,
+  READING = 3,
+  DONE_READING = 4,
+
+  READY_TO_SEND_SOCKET = 5,
+  SENT_SOCKET = 6,
+};
+
+unsigned char state = READY_TO_WRITE;
+
 bool recvInProgress = false;
 bool doneTransmitting = true;
 bool doneReading = true;
@@ -113,7 +128,7 @@ bool sendingToSocket = false;
 bool bufferHasNewData = false;
 
 
-char receivedBytes[20];
+char receivedBytes[20] = {};
 char charsForSocket[20];
 u_int8_t recvIndex = 0;
 
@@ -124,55 +139,43 @@ void flushUARTbuffer() {
 }
 
 void sendData() {
-  if (readyToQuery == true && clientNo > 0) {
-    flushUARTbuffer();
-    Serial.print('A');
-    readyToQuery = false;
-    readyToReadData = true;
-    ws.textAll("sent UART data");
+  if (state == READY_TO_WRITE) {
+    if (clientNo > 0) {
+      flushUARTbuffer();
+      Serial.print('A');
+      state = READY_TO_READ;
+    }
   }
 }
 
 void receiveByte() {
-  if (Serial.available() > 0 && readyToReadData) {
-    if (recvIndex < 13) {
-      char received;
-      char chr[1];
-      received = Serial.read();
-      receivedBytes[recvIndex] = received;
-      chr[0] = received;
-      // ws.textAll(receivedBytes);
-      ws.textAll(chr);
-
-      recvIndex++;
-      bufferHasNewData = true;
+  if (state == READY_TO_READ) {
+    if (Serial.available() > 0) {
+      if (receivedBytes[13] == 0) {
+        char received;
+        received = Serial.read();
+        receivedBytes[recvIndex] = received;
+        recvIndex++;
+      }
+      else {
+        flushUARTbuffer();
+        strcpy(charsForSocket, receivedBytes);
+        for (int i = 0; i < 15;i++) {
+          receivedBytes[i] = 0;
+        }
+        recvIndex = 0;
+        state = READY_TO_SEND_SOCKET;
+      }
     }
-    else {
-      ws.textAll(receivedBytes);
-      flushUARTbuffer();
-      readyToReadData = false;
-      readyToSendToSocket = true;
-      recvIndex = 0;
-    }
-  }
-  else {
-    flushUARTbuffer();
-    readyToReadData = false;
-    readyToSendToSocket = true;
-    strcpy(charsForSocket, receivedBytes);
-    recvIndex = 0;
   }
 }
 
 void sendDataToSocket() {
-  if (readyToSendToSocket && bufferHasNewData && lock == false) {
-    // ws.textAll("test send");
-    ws.textAll(receivedBytes);
-
-    readyToSendToSocket = false;
-    readyToQuery = true;
-    bufferHasNewData = false;
-    lock = true;
+  if (state == READY_TO_SEND_SOCKET) {
+    char msg[20];
+    sprintf(msg, "[%ld]:%s", loopIndex, charsForSocket);
+    ws.textAll(msg);
+    state = SENT_SOCKET;
   }
 }
 
@@ -184,13 +187,10 @@ void loop() {
   sendData();
   receiveByte();
   sendDataToSocket();
-  secs = millis() / 1000;
+  secs = millis() / 100;
 
   if (secs != oldSecs) {
     oldSecs = secs;
-    lock = false;
-    if (bufferHasNewData == false) {
-      readyToQuery = true;
-    }
+    state = READY_TO_WRITE;
   }
 }
